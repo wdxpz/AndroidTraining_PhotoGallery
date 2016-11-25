@@ -5,6 +5,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -23,7 +25,7 @@ import java.util.List;
 /**
  * Created by home on 2016/11/23.
  */
-public class PhotoGalleryFragment extends Fragment{
+public class PhotoGalleryFragment extends Fragment implements LoaderManager.LoaderCallbacks{
     private static final String TAG = "PhotoGalleryFragment";
     private static final String GALLERY_PAGE_NUM = "pager_number";
     private List<GalleryItem> mGalleryList = new ArrayList<>();
@@ -106,6 +108,21 @@ public class PhotoGalleryFragment extends Fragment{
         }
         if(mAdapter!=null)
             mAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public Loader onCreateLoader(int id, Bundle args) {
+        return null;
+    }
+
+    @Override
+    public void onLoadFinished(Loader loader, Object data) {
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader loader) {
+
     }
 
     private class GalleryHolder extends RecyclerView.ViewHolder{
