@@ -109,7 +109,7 @@ public class PhotoGalleryFragment extends Fragment implements LoaderManager.Load
         if(mAdapter!=null)
             mAdapter.notifyDataSetChanged();
     }
-
+//refer http://blog.csdn.net/happy_horse/article/details/51518280 for implements
     @Override
     public Loader onCreateLoader(int id, Bundle args) {
         return null;
