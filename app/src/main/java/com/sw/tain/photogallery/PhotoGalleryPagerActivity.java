@@ -38,7 +38,41 @@ public class PhotoGalleryPagerActivity extends AppCompatActivity {
 
 
         mViewPager = (ViewPager)findViewById(R.id.activity_photo_gallery_pager);
-        mViewPager.setOffscreenPageLimit(0);
+
+        new AsyncGalleryTask().execute();
+
+
+    }
+
+    public static Intent newIntent(Context packageContext, int pages){
+        Intent intent = new Intent(packageContext, PhotoGalleryPagerActivity.class);
+        intent.putExtra(TOTAL_PAGE_NUMBER, pages);
+        return intent;
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(GALLERY_PAGE_NUM, mPageNum);
+    }
+
+
+    private class AsyncGalleryTask extends AsyncTask<Void, Void, Integer> {
+
+        @Override
+        protected Integer doInBackground(Void... params) {
+            return new FlickerFetcher().FetchTotoalPages();
+        }
+
+        @Override
+        protected void onPostExecute(Integer i) {
+            super.onPostExecute(i);
+            startGalleryPages(i);
+        }
+    }
+
+    private void startGalleryPages(int pages) {
+        mPageNum = pages;
 
         FragmentManager fm = getSupportFragmentManager();
         mViewPager.setAdapter(new FragmentStatePagerAdapter(fm) {
@@ -54,20 +88,6 @@ public class PhotoGalleryPagerActivity extends AppCompatActivity {
                 return f;
             }
         });
-
-
-    }
-
-    public static Intent newIntent(Context packageContext, int pages){
-        Intent intent = new Intent(packageContext, PhotoGalleryPagerActivity.class);
-        intent.putExtra(TOTAL_PAGE_NUMBER, pages);
-        return intent;
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putInt(GALLERY_PAGE_NUM, mPageNum);
     }
 
 }

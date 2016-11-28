@@ -23,8 +23,7 @@ public class PhotoGalleryActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_fragment);
-        new AsyncGalleryTask().execute();
-       // startPagerActivity(10);
+//        new AsyncGalleryTask().execute();
     }
 
     private void startPagerActivity(int pagenumber){
@@ -32,17 +31,17 @@ public class PhotoGalleryActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    private class AsyncGalleryTask extends AsyncTask<Void, Void, Integer> {
-
-        @Override
-        protected Integer doInBackground(Void... params) {
-            return new FlickerFetcher().FetchTotoalPages();
-        }
-
-        @Override
-        protected void onPostExecute(Integer i) {
-            super.onPostExecute(i);
-            startPagerActivity(i);
-        }
-    }
+//    private class AsyncGalleryTask extends AsyncTask<Void, Void, Integer> {
+//
+//        @Override
+//        protected Integer doInBackground(Void... params) {
+//            return new FlickerFetcher().FetchTotoalPages();
+//        }
+//
+//        @Override
+//        protected void onPostExecute(Integer i) {
+//            super.onPostExecute(i);
+//            startPagerActivity(i);
+//        }
+//    }
 }

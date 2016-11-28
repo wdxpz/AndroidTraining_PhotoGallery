@@ -99,7 +99,14 @@ public class PhotoGalleryFragment extends Fragment{
         return v;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateAdapter();
+    }
+
     private void updateAdapter(){
+
         if(isAdded()){
             mAdapter = new GalleryAdapter(mGalleryList);
             mRecyclerView.setAdapter(mAdapter);
