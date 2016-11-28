@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -16,6 +17,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.sw.tain.photogallery.Utils.FlickerFetcher;
+import com.sw.tain.photogallery.Utils.GalleryAsyncLoader;
 import com.sw.tain.photogallery.Utils.GalleryItem;
 
 import java.io.IOException;
@@ -25,18 +27,19 @@ import java.util.List;
 /**
  * Created by home on 2016/11/23.
  */
-public class PhotoGalleryFragment extends Fragment implements LoaderManager.LoaderCallbacks{
+public class PhotoGalleryFragment extends Fragment implements LoaderManager.LoaderCallbacks<List<GalleryItem>>{
     private static final String TAG = "PhotoGalleryFragment";
     private static final String GALLERY_PAGE_NUM = "pager_number";
     private List<GalleryItem> mGalleryList = new ArrayList<>();
     private GalleryAdapter mAdapter;
 
     private RecyclerView mRecyclerView;
-    private int mGalleryPageNum;
+    public int mGalleryPageNum;
     private TextView mTextView;
 
     private boolean mIsVisible=false;
     private boolean mIsCreated=false;
+
 
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
@@ -47,20 +50,10 @@ public class PhotoGalleryFragment extends Fragment implements LoaderManager.Load
         }else{
             mIsVisible = false;
         }
-        loadData();
+
+
     }
 
-    private void loadData() {
-//        if(mIsVisible && mIsCreated){
-        if(mIsVisible){
-            if(mTask==null){
-                mTask = new FlickerAsynTask();
-                mTask.execute();
-            }else{
-                updateAdapter();
-            }
-        }
-    }
 
     public static PhotoGalleryFragment newInstance(int page){
         Bundle bundle = new Bundle();
@@ -74,16 +67,17 @@ public class PhotoGalleryFragment extends Fragment implements LoaderManager.Load
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setRetainInstance(true);
+ //       setRetainInstance(true);
 
         Bundle args = getArguments();
         if(args != null){
             mGalleryPageNum = args.getInt(GALLERY_PAGE_NUM);
         }
         mIsCreated = true;
-        loadData();
+
+        LoaderManager loadManager = getLoaderManager();
+        loadManager.initLoader(0, null, this);
     }
-    private  FlickerAsynTask mTask;
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -96,33 +90,48 @@ public class PhotoGalleryFragment extends Fragment implements LoaderManager.Load
 //       mTextView.setVisibility(View.INVISIBLE);
 
 
- //       updateAdapter();
+        updateAdapter();
 
         return v;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateAdapter();
+    }
+
     private void updateAdapter(){
-        if(isAdded()){
+  //      if(isAdded())
+//        if(mAdapter!=null){
+//            mAdapter.notifyDataSetChanged();
+//        }else
+        {
             mAdapter = new GalleryAdapter(mGalleryList);
             mRecyclerView.setAdapter(mAdapter);
         }
-        if(mAdapter!=null)
-            mAdapter.notifyDataSetChanged();
+
     }
-//refer http://blog.csdn.net/happy_horse/article/details/51518280 for implements
+//refer http://blog.csdn.net/murphykwu/article/details/35287883 for implementation of LoadManager
     @Override
     public Loader onCreateLoader(int id, Bundle args) {
-        return null;
+
+        GalleryAsyncLoader loader = new GalleryAsyncLoader(this.getActivity(), mGalleryPageNum);
+        return loader;
     }
 
     @Override
-    public void onLoadFinished(Loader loader, Object data) {
-
+    public void onLoadFinished(Loader<List<GalleryItem>> loader, List<GalleryItem> data) {
+        mGalleryList = data;
+        updateAdapter();
     }
+
 
     @Override
     public void onLoaderReset(Loader loader) {
 
+        mGalleryList = null;
+        updateAdapter();
     }
 
     private class GalleryHolder extends RecyclerView.ViewHolder{
@@ -164,38 +173,9 @@ public class PhotoGalleryFragment extends Fragment implements LoaderManager.Load
         public int getItemCount() {
             return mList.size();
         }
+
     }
 
-    private class FlickerAsynTask extends AsyncTask<Void, Void, List<GalleryItem>>{
-
-
-
-        @Override
-        protected List<GalleryItem> doInBackground(Void... params) {
-            List<GalleryItem> galleryList = new ArrayList<>();
-
-
-//            try {
-//                String s = new FlickerFetcher().getUrlString("http://www.baidu.com");
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-
-
-            galleryList =  new FlickerFetcher().FetchItem(mGalleryPageNum+1);
-
-
-            return galleryList;
-        }
-
-        @Override
-        protected void onPostExecute(List<GalleryItem> galleryItems) {
-            super.onPostExecute(galleryItems);
-
-            mGalleryList = galleryItems;
-            updateAdapter();
-        }
-    }
 
 
 }
