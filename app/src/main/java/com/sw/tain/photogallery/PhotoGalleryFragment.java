@@ -14,6 +14,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.squareup.picasso.Picasso;
 import com.sw.tain.photogallery.Utils.FlickerFetcher;
 import com.sw.tain.photogallery.Utils.GalleryItem;
 import com.sw.tain.photogallery.Utils.ThumbnailDownloader;
@@ -165,6 +166,12 @@ public class PhotoGalleryFragment extends Fragment{
         public void bindDrawalbe(Bitmap bitmap) {
             mThumbnailImageView.setImageBitmap(bitmap);
         }
+
+        public void bindGalleryItem(GalleryItem item){
+            Picasso.with(getActivity())
+                    .load(item.getUrl())
+                    .into(mThumbnailImageView);
+        }
     }
 
     private class GalleryAdapter extends RecyclerView.Adapter<GalleryHolder>{
@@ -187,7 +194,9 @@ public class PhotoGalleryFragment extends Fragment{
             GalleryItem item = mList.get(position);
 //            holder.bindView(item);
 
-            mThumbnailDonwloader.enqueueThumbnail(holder, item.getUrl());
+//            mThumbnailDonwloader.enqueueThumbnail(holder, item.getUrl());
+
+            holder.bindGalleryItem(item);
 
         }
 
