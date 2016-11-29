@@ -146,9 +146,9 @@ public class PhotoGalleryFragment extends Fragment{
 //            mAdapter.notifyDataSetChanged();
     }
 
-    private class GalleryHolder extends RecyclerView.ViewHolder{
+    public class GalleryHolder extends RecyclerView.ViewHolder{
 //        private TextView mTitleTextView;
-        private ImageView mThumbnailImageView;
+        public ImageView mThumbnailImageView;
 
         public GalleryHolder(View itemView) {
             super(itemView);
@@ -194,15 +194,24 @@ public class PhotoGalleryFragment extends Fragment{
             GalleryItem item = mList.get(position);
 //            holder.bindView(item);
 
-//            mThumbnailDonwloader.enqueueThumbnail(holder, item.getUrl());
+            holder.bindDrawalbe(null);
+            holder.mThumbnailImageView.setTag(item.getUrl());
+            mThumbnailDonwloader.enqueueThumbnail(holder, item.getUrl());
 
-            holder.bindGalleryItem(item);
+//            holder.bindGalleryItem(item);
 
         }
 
         @Override
         public int getItemCount() {
             return mList.size();
+        }
+
+        @Override
+        public void onViewRecycled(GalleryHolder holder) {
+            super.onViewRecycled(holder);
+            //解决异步加载乱序方法之一
+           // holder.bindDrawalbe(null);
         }
     }
 

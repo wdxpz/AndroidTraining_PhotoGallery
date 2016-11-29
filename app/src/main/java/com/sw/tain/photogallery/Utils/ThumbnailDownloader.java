@@ -6,6 +6,9 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
+import android.util.LruCache;
+
+import com.sw.tain.photogallery.PhotoGalleryFragment;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,10 +18,22 @@ import java.util.concurrent.ConcurrentMap;
  * Created by home on 2016/11/29.
  */
 
+/**
+*refer http://blog.csdn.net/lmj623565791/article/details/38377229,
+* http://blog.csdn.net/lmj623565791/article/details/47079737/
+* for concept of Looper, Handler, Message, and HandlerThread
+
+*refer ImageLoader in http://blog.csdn.net/lmj623565791/article/details/38476887 for LruCache and image resampling
+*http://blog.sina.com.cn/s/blog_5da93c8f0102uxee.html for LruCache
+
+*use LocalCacheUtils, LruCache, network to 三级缓存图片机制，refer: http://blog.sina.com.cn/s/blog_5da93c8f0102uxee.html
+ */
+
 public class ThumbnailDownloader<T> extends HandlerThread {
     private static final String TAG = "ThumbernailDownloader";
     private static final int MSG_THUMBNAIL_DOWLNOAD = 0;
     private final Handler mMainThreadHandler;
+    private final LruCache<String, Bitmap> mLruCache;
     private ConcurrentMap<T, String> mRequestMap = new ConcurrentHashMap<>();
     private Handler mRequestHandler;
     private boolean mIsQuit = false;
@@ -27,6 +42,34 @@ public class ThumbnailDownloader<T> extends HandlerThread {
     public ThumbnailDownloader(Handler mainThreadHandler) {
         super(TAG);
         mMainThreadHandler = mainThreadHandler;
+        mLruCache = initLruCache();
+    }
+
+    private LruCache<String, Bitmap> initLruCache() {
+
+        // 获取应用程序最大可用内存
+        int maxMemory = (int) (Runtime.getRuntime().maxMemory()/1024);
+        int cacheSize = maxMemory / 8;
+        LruCache<String, Bitmap> lruCache = new LruCache<String, Bitmap>(cacheSize) {
+            @Override
+            protected int sizeOf(String url, Bitmap value) {
+                //return value.getRowBytes() * value.getHeight();
+                return value.getByteCount() / 1024;
+            }
+        };
+        return lruCache;
+    }
+
+    private Bitmap getBitmapFromLruCache(String url) {
+        return mLruCache.get(url);
+    }
+
+    private void addBitmapToLruCache(String url, Bitmap bitmap){
+        if (getBitmapFromLruCache(url) == null)
+        {
+            if (bitmap != null)
+                mLruCache.put(url, bitmap);
+        }
     }
 
     @Override
@@ -64,27 +107,47 @@ public class ThumbnailDownloader<T> extends HandlerThread {
 
         if(url == null) return;
 
-        try {
-            byte[] bitmapByteArray = new FlickerFetcher().getUrlByteArray(mRequestMap.get(target));
-            final Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapByteArray, 0, bitmapByteArray.length);
-            Log.d(TAG, "bitmap downloaded!");
+        final Bitmap bitmap;
+
+
+        if(getBitmapFromLruCache(url) != null){
+            bitmap = getBitmapFromLruCache(url);
+            Log.d(TAG, "bitmap loaded from LruCache!");
+        }else
+        {
+            byte[] bitmapByteArray = new byte[0];
+            try {
+                bitmapByteArray = new FlickerFetcher().getUrlByteArray(mRequestMap.get(target));
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.d(TAG, "bitmap downloade failed! with url: " + mRequestMap.get(target));
+            }
+            bitmap = BitmapFactory.decodeByteArray(bitmapByteArray, 0, bitmapByteArray.length);
+            Log.d(TAG, "bitmap downloaded from url: " + mRequestMap.get(target));
+            if(bitmap != null) addBitmapToLruCache(url, bitmap);
+        }
+        PhotoGalleryFragment.GalleryHolder holder = (PhotoGalleryFragment.GalleryHolder)target;
+        if(!holder.mThumbnailImageView.getTag().toString().equals(url))
+        {
+            Log.d(TAG, "downloaed not match the view");
+        }else
+        {
             mMainThreadHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    if(mIsQuit || mRequestMap.get(target)!=url){
+                    if (mIsQuit || mRequestMap.get(target) != url) {
                         return;
                     }
                     mRequestMap.remove(target);
                     mThumbnailDownloaderListner.onThumbnailDownloaderListner(target, bitmap);
                 }
             });
-        } catch (IOException e) {
-            e.printStackTrace();
-            Log.d(TAG, "bitmap downloade failed!");
         }
 
 
     }
+
+
 
     public interface ThumbnailDownloaderListner<T>{
         void onThumbnailDownloaderListner(T target, Bitmap bitmap);
@@ -96,5 +159,6 @@ public class ThumbnailDownloader<T> extends HandlerThread {
 
     public void clearQueue(){
         mRequestHandler.removeMessages(MSG_THUMBNAIL_DOWLNOAD);
+        mLruCache.evictAll();
     }
 }
