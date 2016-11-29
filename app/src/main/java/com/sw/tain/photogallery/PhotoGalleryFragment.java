@@ -1,22 +1,23 @@
 package com.sw.tain.photogallery;
 
-import android.net.Uri;
+import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.sw.tain.photogallery.Utils.FlickerFetcher;
 import com.sw.tain.photogallery.Utils.GalleryItem;
+import com.sw.tain.photogallery.Utils.ThumbnailDownloader;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +36,9 @@ public class PhotoGalleryFragment extends Fragment{
 
     private boolean mIsVisible=false;
     private boolean mIsCreated=false;
+    private  FlickerAsynTask mTask;
+    private Handler mHandler;
+    private ThumbnailDownloader<GalleryHolder> mThumbnailDonwloader;
 
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
@@ -80,8 +84,22 @@ public class PhotoGalleryFragment extends Fragment{
         }
         mIsCreated = true;
         loadData();
+
+
+        mHandler = new Handler();
+        mThumbnailDonwloader = new ThumbnailDownloader<>(mHandler);
+        mThumbnailDonwloader.setThumbnailDownloaderListner(new ThumbnailDownloader.ThumbnailDownloaderListner<GalleryHolder>() {
+
+            @Override
+            public void onThumbnailDownloaderListner(GalleryHolder target, Bitmap bitmap) {
+                target.bindDrawalbe(bitmap);
+            }
+        });
+        mThumbnailDonwloader.start();
+        mThumbnailDonwloader.getLooper();
+
     }
-    private  FlickerAsynTask mTask;
+
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -105,28 +123,47 @@ public class PhotoGalleryFragment extends Fragment{
         updateAdapter();
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mThumbnailDonwloader.quit();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        mThumbnailDonwloader.clearQueue();
+    }
+
     private void updateAdapter(){
 
         if(isAdded()){
             mAdapter = new GalleryAdapter(mGalleryList);
             mRecyclerView.setAdapter(mAdapter);
         }
-        if(mAdapter!=null)
-            mAdapter.notifyDataSetChanged();
+//        if(mAdapter!=null)
+//            mAdapter.notifyDataSetChanged();
     }
 
     private class GalleryHolder extends RecyclerView.ViewHolder{
-
-        private TextView mTitleTextView;
+//        private TextView mTitleTextView;
+        private ImageView mThumbnailImageView;
 
         public GalleryHolder(View itemView) {
             super(itemView);
 
-            mTitleTextView = (TextView)itemView;
+//            mTitleTextView = (TextView)itemView;
+
+            mThumbnailImageView = (ImageView)itemView.findViewById(R.id.grid_item_image_view);
+
         }
 
-        public void bindView(GalleryItem item) {
-            mTitleTextView.setText(item.getCaption());
+//        public void bindView(GalleryItem item) {
+//            mTitleTextView.setText(item.getCaption());
+//        }
+
+        public void bindDrawalbe(Bitmap bitmap) {
+            mThumbnailImageView.setImageBitmap(bitmap);
         }
     }
 
@@ -140,14 +177,18 @@ public class PhotoGalleryFragment extends Fragment{
 
         @Override
         public GalleryHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View v = LayoutInflater.from(getActivity()).inflate(android.R.layout.simple_list_item_1, parent, false);
+            //View v = LayoutInflater.from(getActivity()).inflate(android.R.layout.simple_list_item_1, parent, false);
+            View v = LayoutInflater.from(getActivity()).inflate(R.layout.grid_item_thumbnail_image_view, parent, false);
             return new GalleryHolder(v);
         }
 
         @Override
         public void onBindViewHolder(GalleryHolder holder, int position) {
             GalleryItem item = mList.get(position);
-            holder.bindView(item);
+//            holder.bindView(item);
+
+            mThumbnailDonwloader.enqueueThumbnail(holder, item.getUrl());
+
         }
 
         @Override
@@ -162,7 +203,7 @@ public class PhotoGalleryFragment extends Fragment{
 
         @Override
         protected List<GalleryItem> doInBackground(Void... params) {
-            List<GalleryItem> galleryList = new ArrayList<>();
+            List<GalleryItem> galleryList;
 
 
 //            try {
@@ -173,6 +214,7 @@ public class PhotoGalleryFragment extends Fragment{
 
 
             galleryList =  new FlickerFetcher().FetchItem(mGalleryPageNum+1);
+            if(galleryList==null)  galleryList = new ArrayList<>();
 
 
             return galleryList;
@@ -186,6 +228,5 @@ public class PhotoGalleryFragment extends Fragment{
             updateAdapter();
         }
     }
-
 
 }
