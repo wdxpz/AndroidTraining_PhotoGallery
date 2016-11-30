@@ -127,9 +127,11 @@ public class ThumbnailDownloader<T> extends HandlerThread {
             if(bitmap != null) addBitmapToLruCache(url, bitmap);
         }
         PhotoGalleryFragment.GalleryHolder holder = (PhotoGalleryFragment.GalleryHolder)target;
-        if(!holder.mThumbnailImageView.getTag().toString().equals(url))
+        if(!mThumbnailDownloaderListner.isDownlaodedMatchView(target, url))
         {
-            Log.d(TAG, "downloaed not match the view");
+            Log.d(TAG, "downloaded not match the view: /n"
+                    + "view tag: " + ((PhotoGalleryFragment.GalleryHolder) target).mThumbnailImageView.getTag().toString() + "/n"
+                    + "downloaded url: "+ url);
         }else
         {
             mMainThreadHandler.post(new Runnable() {
@@ -143,14 +145,13 @@ public class ThumbnailDownloader<T> extends HandlerThread {
                 }
             });
         }
-
-
     }
 
 
 
     public interface ThumbnailDownloaderListner<T>{
         void onThumbnailDownloaderListner(T target, Bitmap bitmap);
+        boolean isDownlaodedMatchView(T target, String url);
     }
 
     public void setThumbnailDownloaderListner(ThumbnailDownloaderListner<T> lisnter){

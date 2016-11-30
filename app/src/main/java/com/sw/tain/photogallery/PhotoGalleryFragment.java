@@ -95,6 +95,11 @@ public class PhotoGalleryFragment extends Fragment{
             public void onThumbnailDownloaderListner(GalleryHolder target, Bitmap bitmap) {
                 target.bindDrawalbe(bitmap);
             }
+
+            @Override
+            public boolean isDownlaodedMatchView(GalleryHolder target, String url) {
+                return target.mThumbnailImageView.getTag().toString().equals(url);
+            }
         });
         mThumbnailDonwloader.start();
         mThumbnailDonwloader.getLooper();
