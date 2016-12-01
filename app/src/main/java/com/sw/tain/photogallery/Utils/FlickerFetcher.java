@@ -1,5 +1,7 @@
 package com.sw.tain.photogallery.Utils;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.util.Log;
 import android.widget.Gallery;
@@ -12,6 +14,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +32,8 @@ public class FlickerFetcher {
         try {
             URL url = new URL(urlStr);
             urlConnection = (HttpURLConnection)url.openConnection();
+ //           urlConnection.setConnectTimeout(5*1000);
+ //           urlConnection.setReadTimeout(3*1000);
             boolean redirect = false;
             int status = urlConnection.getResponseCode();
             if(status!=HttpURLConnection.HTTP_OK){
@@ -93,6 +98,32 @@ public class FlickerFetcher {
 //        return getUrlByteArray(url).toString();
         return  new String(getUrlByteArray(url));
     }
+
+    public Bitmap getBitmap(String urlStr) {
+        HttpURLConnection urlConnection = null;
+        URL url;
+        Bitmap bitmap = null;
+        try {
+            url = new URL(urlStr);
+            urlConnection = (HttpURLConnection) url.openConnection();
+//            urlConnection.setConnectTimeout(5 * 1000);
+//            urlConnection.setReadTimeout(3 * 1000);
+//            urlConnection.setDoInput(true);
+//            urlConnection.setDoOutput(true);
+            bitmap = BitmapFactory.decodeStream(urlConnection.getInputStream());
+        } catch (MalformedURLException e) {
+            Log.d("Downloader", "invalid URL!");
+            e.printStackTrace();
+        } catch (IOException e) {
+            Log.d("Downloader", "failed download from: "+ urlStr);
+            e.printStackTrace();
+        }finally {
+            if(urlConnection!=null)
+                urlConnection.disconnect();
+        }
+        return bitmap;
+    }
+
     private static final String API_KEY = "7ba84bb9d79956729332868e04317045";
 
     public List<GalleryItem> FetchItem(int page){

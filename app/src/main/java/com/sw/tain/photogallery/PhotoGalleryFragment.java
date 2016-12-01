@@ -2,6 +2,7 @@ package com.sw.tain.photogallery;
 
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.Nullable;
@@ -11,6 +12,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -39,7 +41,20 @@ public class PhotoGalleryFragment extends Fragment{
     private boolean mIsCreated=false;
     private  FlickerAsynTask mTask;
     private Handler mHandler;
-    private ThumbnailDownloader<GalleryHolder> mThumbnailDonwloader;
+    private ThumbnailDownloader mThumbnailDonwloader;
+    private GridLayoutManager mLayoutManager;
+    private int mFirstVisibleItem;
+    private int mVisualItemCount;
+    private boolean mIsFirstEnter = true;
+
+    public static PhotoGalleryFragment newInstance(int page){
+        Bundle bundle = new Bundle();
+        bundle.putSerializable(GALLERY_PAGE_NUM, page);
+
+        PhotoGalleryFragment f = new PhotoGalleryFragment();
+        f.setArguments(bundle);
+        return f;
+    }
 
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
@@ -51,27 +66,6 @@ public class PhotoGalleryFragment extends Fragment{
             mIsVisible = false;
         }
         loadData();
-    }
-
-    private void loadData() {
-//        if(mIsVisible && mIsCreated){
-        if(mIsVisible){
-            if(mTask==null){
-                mTask = new FlickerAsynTask();
-                mTask.execute();
-            }else{
-                updateAdapter();
-            }
-        }
-    }
-
-    public static PhotoGalleryFragment newInstance(int page){
-        Bundle bundle = new Bundle();
-        bundle.putSerializable(GALLERY_PAGE_NUM, page);
-
-        PhotoGalleryFragment f = new PhotoGalleryFragment();
-        f.setArguments(bundle);
-        return f;
     }
 
     @Override
@@ -88,17 +82,25 @@ public class PhotoGalleryFragment extends Fragment{
 
 
         mHandler = new Handler();
-        mThumbnailDonwloader = new ThumbnailDownloader<>(mHandler);
-        mThumbnailDonwloader.setThumbnailDownloaderListner(new ThumbnailDownloader.ThumbnailDownloaderListner<GalleryHolder>() {
+        mThumbnailDonwloader = new ThumbnailDownloader(getActivity(), mHandler);
+        mThumbnailDonwloader.setThumbnailDownloaderListner(new ThumbnailDownloader.ThumbnailDownloaderListner() {
+
+//            @Override
+//            public void onThumbnailDownloaderListner(GalleryHolder target, Bitmap bitmap) {
+//                target.bindDrawalbe(bitmap);
+//            }
+//
+//            @Override
+//            public boolean isDownlaodedMatchView(GalleryHolder target, String url) {
+//                return target.mThumbnailImageView.getTag().toString().equals(url);
+//            }
 
             @Override
-            public void onThumbnailDownloaderListner(GalleryHolder target, Bitmap bitmap) {
-                target.bindDrawalbe(bitmap);
-            }
+            public void onThumbnailDownloaderListner(String url, Bitmap bitmap) {
+                ImageView view = (ImageView)mRecyclerView.findViewWithTag(url);
+                if(view == null) return;
+                view.setImageBitmap(bitmap);
 
-            @Override
-            public boolean isDownlaodedMatchView(GalleryHolder target, String url) {
-                return target.mThumbnailImageView.getTag().toString().equals(url);
             }
         });
         mThumbnailDonwloader.start();
@@ -111,14 +113,54 @@ public class PhotoGalleryFragment extends Fragment{
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_photo_gallery_recyclerview, container, false);
         mRecyclerView = (RecyclerView)v.findViewById(R.id.recyclerview_photo_gallery);
-        mRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+        mLayoutManager = new GridLayoutManager(getActivity(), 3);
+        mRecyclerView.setLayoutManager(mLayoutManager);
+        mRecyclerView.setHasFixedSize(true);
+        mRecyclerView.setItemViewCacheSize(20);
+        mRecyclerView.setDrawingCacheEnabled(true);
+        mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+//                super.onScrolled(recyclerView, dx, dy);
+                mFirstVisibleItem = mLayoutManager.findFirstVisibleItemPosition();
+                //mVisualItemCount = mLayoutManager.getItemCount(); //getItemCount()返回的是总的item数
+                mVisualItemCount = mLayoutManager.getChildCount();
+
+                if(mIsFirstEnter && mVisualItemCount>0){
+                    showImage(mFirstVisibleItem, mVisualItemCount);
+                    mIsFirstEnter = false;
+                }
+            }
+
+
+
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+//                super.onScrollStateChanged(recyclerView, newState);
+                if(newState == AbsListView.OnScrollListener.SCROLL_STATE_IDLE){
+
+                    showImage(mFirstVisibleItem, mVisualItemCount);
+                }
+                else{
+                    mThumbnailDonwloader.interrupt();
+                    mThumbnailDonwloader.clearQueue();
+                }
+            }
+
+            private void showImage(int firstVisibleItem, int visualItemCount) {
+                for(int i=firstVisibleItem; i<firstVisibleItem+visualItemCount; i++){
+                    String url = mGalleryList.get(i).getUrl();
+                    if(url == null) continue;
+                    mThumbnailDonwloader.downloadImage(url);
+                }
+            }
+        });
+
 
         mTextView = (TextView)v.findViewById(R.id.textView_page_number);
         mTextView.setText("page: " + mGalleryPageNum );
-//       mTextView.setVisibility(View.INVISIBLE);
+//      mTextView.setVisibility(View.INVISIBLE);
 
-
- //       updateAdapter();
 
         return v;
     }
@@ -132,13 +174,26 @@ public class PhotoGalleryFragment extends Fragment{
     @Override
     public void onDestroy() {
         super.onDestroy();
+        mThumbnailDonwloader.clear();
         mThumbnailDonwloader.quit();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        mThumbnailDonwloader.clearQueue();
+        mThumbnailDonwloader.clear();
+    }
+
+    private void loadData() {
+//        if(mIsVisible && mIsCreated){
+        if(mIsVisible){
+            if(mTask==null){
+                mTask = new FlickerAsynTask();
+                mTask.execute();
+            }else{
+                updateAdapter();
+            }
+        }
     }
 
     private void updateAdapter(){
@@ -153,13 +208,11 @@ public class PhotoGalleryFragment extends Fragment{
 
     public class GalleryHolder extends RecyclerView.ViewHolder{
 //        private TextView mTitleTextView;
+//            mTitleTextView = (TextView)itemView;
         public ImageView mThumbnailImageView;
 
         public GalleryHolder(View itemView) {
             super(itemView);
-
-//            mTitleTextView = (TextView)itemView;
-
             mThumbnailImageView = (ImageView)itemView.findViewById(R.id.grid_item_image_view);
 
         }
@@ -181,6 +234,7 @@ public class PhotoGalleryFragment extends Fragment{
 
     private class GalleryAdapter extends RecyclerView.Adapter<GalleryHolder>{
 
+        private static final int PRELOAD_CACHE_SIZE = 10;
         private List<GalleryItem> mList;
 
         public GalleryAdapter(List<GalleryItem> list) {
@@ -196,15 +250,22 @@ public class PhotoGalleryFragment extends Fragment{
 
         @Override
         public void onBindViewHolder(GalleryHolder holder, int position) {
+//           holder.bindGalleryItem(item); //by Picasso
+
             GalleryItem item = mList.get(position);
-//            holder.bindView(item);
 
-            holder.bindDrawalbe(null);
-            holder.mThumbnailImageView.setTag(item.getUrl());
-            mThumbnailDonwloader.enqueueThumbnail(holder, item.getUrl());
+//            holder.bindDrawalbe(null);
+//            holder.mThumbnailImageView.setTag(item.getUrl());
+//            mThumbnailDonwloader.load(holder, item.getUrl());
 
-//            holder.bindGalleryItem(item);
-
+            String url = item.getUrl();
+            holder.mThumbnailImageView.setTag(url);
+            Bitmap bitmap = mThumbnailDonwloader.getCacheBitmap(url);
+            if(bitmap!=null){
+                holder.mThumbnailImageView.setImageBitmap(bitmap);
+            }else{
+                holder.mThumbnailImageView.setImageDrawable(getContext().getResources().getDrawable(R.drawable.ic_action_name));
+            }
         }
 
         @Override
@@ -212,12 +273,6 @@ public class PhotoGalleryFragment extends Fragment{
             return mList.size();
         }
 
-        @Override
-        public void onViewRecycled(GalleryHolder holder) {
-            super.onViewRecycled(holder);
-            //解决异步加载乱序方法之一
-           // holder.bindDrawalbe(null);
-        }
     }
 
     private class FlickerAsynTask extends AsyncTask<Void, Void, List<GalleryItem>>{
@@ -229,16 +284,8 @@ public class PhotoGalleryFragment extends Fragment{
             List<GalleryItem> galleryList;
 
 
-//            try {
-//                String s = new FlickerFetcher().getUrlString("http://www.baidu.com");
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-
-
             galleryList =  new FlickerFetcher().FetchItem(mGalleryPageNum+1);
             if(galleryList==null)  galleryList = new ArrayList<>();
-
 
             return galleryList;
         }
