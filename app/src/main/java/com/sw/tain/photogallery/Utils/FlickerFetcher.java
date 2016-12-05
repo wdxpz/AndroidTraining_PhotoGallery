@@ -25,6 +25,17 @@ import java.util.List;
 
 public class FlickerFetcher {
     private static final String TAG = "FlickerFetcher";
+    private final Uri mBaseUri;
+
+    public FlickerFetcher() {
+         mBaseUri = Uri.parse("https://api.flickr.com/services/rest/")
+                .buildUpon()
+                .appendQueryParameter("api_key", API_KEY)
+                .appendQueryParameter("nojsoncallback", "1")
+                .appendQueryParameter("extras", "url_s")
+                .appendQueryParameter("format", "json")
+                .build();
+    }
 
     public byte[] getUrlByteArray(String urlStr) throws IOException {
 
@@ -177,13 +188,8 @@ public class FlickerFetcher {
     }
 
     private String buildUrl(){
-        String url = Uri.parse("https://api.flickr.com/services/rest/")
-                .buildUpon()
+        String url = mBaseUri.buildUpon()
                 .appendQueryParameter("method", "flickr.photos.getRecent")
-                .appendQueryParameter("api_key", API_KEY)
-                .appendQueryParameter("nojsoncallback", "1")
-                .appendQueryParameter("extras", "url_s")
-                .appendQueryParameter("format", "json")
                 .build()
                 .toString();
 
@@ -191,16 +197,50 @@ public class FlickerFetcher {
     }
 
     private String buildUrl(int page){
-        String url = Uri.parse("https://api.flickr.com/services/rest/")
-                .buildUpon()
+        String url = mBaseUri.buildUpon()
                 .appendQueryParameter("method", "flickr.photos.getRecent")
-                .appendQueryParameter("api_key", API_KEY)
-                .appendQueryParameter("nojsoncallback", "1")
-                .appendQueryParameter("extras", "url_s")
-                .appendQueryParameter("format", "json")
                 .appendQueryParameter("page", ""+page)
                 .build()
                 .toString();
         return url;
+    }
+
+    private String buildUrl(String query){
+        String url = mBaseUri.buildUpon()
+                .appendQueryParameter("method", "flickr.photos.search")
+                .appendQueryParameter("text", query)
+                .build()
+                .toString();
+        return url;
+    }
+
+    public List<GalleryItem> searchItem(String queryStr) {
+        List<GalleryItem> itemList = new ArrayList<>();
+
+        String jsonResutl = null;
+
+        try {
+            String url = buildUrl(queryStr);
+            Log.d(TAG, url);
+            jsonResutl = getUrlString(url);
+            JSONObject jsonObject = new JSONObject(jsonResutl);
+            JSONObject jsonPhotosObject = jsonObject.getJSONObject("photos");
+            JSONArray jsonPhotoArry = jsonPhotosObject.getJSONArray("photo");
+            for(int i=0; i<jsonPhotoArry.length(); i++){
+                JSONObject jsonPhotoObject = jsonPhotoArry.getJSONObject(i);
+                if(jsonPhotoObject.getString("url_s")==null || jsonPhotoObject.getString("url_s").equals("")) continue;
+                GalleryItem item =  new GalleryItem();
+                item.setCaption(jsonPhotoObject.getString("title"));
+                item.setId(jsonPhotoObject.getString("id"));
+                item.setUrl(jsonPhotoObject.getString("url_s"));
+                itemList.add(item);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return itemList;
     }
 }

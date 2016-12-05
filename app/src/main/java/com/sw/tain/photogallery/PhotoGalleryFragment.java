@@ -9,7 +9,12 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
@@ -19,8 +24,11 @@ import android.widget.TextView;
 import com.squareup.picasso.Picasso;
 import com.sw.tain.photogallery.Utils.FlickerFetcher;
 import com.sw.tain.photogallery.Utils.GalleryItem;
+import com.sw.tain.photogallery.Utils.QueryPreferences;
 import com.sw.tain.photogallery.Utils.ThumbnailDownloader;
 
+import java.io.FileDescriptor;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,6 +54,7 @@ public class PhotoGalleryFragment extends Fragment{
     private int mFirstVisibleItem;
     private int mVisualItemCount;
     private boolean mIsFirstEnter = true;
+    private SearchView mSearchView;
 
     public static PhotoGalleryFragment newInstance(int page){
         Bundle bundle = new Bundle();
@@ -65,20 +74,21 @@ public class PhotoGalleryFragment extends Fragment{
         }else{
             mIsVisible = false;
         }
-        loadData();
+        loadData(null);
     }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
+        setHasOptionsMenu(true);
 
         Bundle args = getArguments();
         if(args != null){
             mGalleryPageNum = args.getInt(GALLERY_PAGE_NUM);
         }
         mIsCreated = true;
-        loadData();
+        loadData(null);
 
 
         mHandler = new Handler();
@@ -146,14 +156,6 @@ public class PhotoGalleryFragment extends Fragment{
                     mThumbnailDonwloader.clearQueue();
                 }
             }
-
-            private void showImage(int firstVisibleItem, int visualItemCount) {
-                for(int i=firstVisibleItem; i<firstVisibleItem+visualItemCount; i++){
-                    String url = mGalleryList.get(i).getUrl();
-                    if(url == null) continue;
-                    mThumbnailDonwloader.downloadImage(url);
-                }
-            }
         });
 
 
@@ -163,6 +165,60 @@ public class PhotoGalleryFragment extends Fragment{
 
 
         return v;
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.menu_gallery_item_fragment, menu);
+
+        MenuItem item = menu.findItem(R.id.gallery_fragment_bar_search);
+        //SearchView的资源定义文档不能为：android:actionViewClass="android.support.v7.widget.SearchView"
+        //必须为app:actionViewClass="android.support.v7.widget.SearchView"，否则返回的SearchView为空
+        mSearchView = (SearchView)item.getActionView();
+        String preQueryStr = QueryPreferences.getQueryPreferences(getActivity());
+        if(preQueryStr!=null){
+            mSearchView.setQueryHint(preQueryStr);
+        }
+        mSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                Log.d(TAG, "search query: " + query);
+                if(query!=null || !query.trim().equals("")){
+                    QueryPreferences.setQueryPreferences(getActivity(), query);
+                    mThumbnailDonwloader.interrupt();
+                    mThumbnailDonwloader.clearQueue();
+                    mIsFirstEnter = true;
+                    loadData(query);
+                }
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+
+                return false;
+            }
+        });
+        mSearchView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
+    }
+
+
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch(item.getItemId()){
+            case R.id.gallery_fragment_clear_search:
+                QueryPreferences.setQueryPreferences(getActivity(), null);
+                mSearchView.setQueryHint(null);
+                loadData(null);
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -184,15 +240,28 @@ public class PhotoGalleryFragment extends Fragment{
         mThumbnailDonwloader.clear();
     }
 
-    private void loadData() {
+    private void loadData(@Nullable String query) {
 //        if(mIsVisible && mIsCreated){
         if(mIsVisible){
-            if(mTask==null){
+//            if(mTask==null)
+//            {
+//                if(query==null){
+//                    mTask = new FlickerAsynTask();
+//                }else{
+//                    mTask = new FlickerAsynTask(query);
+//                }
+//
+//                mTask.execute();
+//            }else{
+//                updateAdapter();
+//            }
+            if(query==null){
                 mTask = new FlickerAsynTask();
-                mTask.execute();
             }else{
-                updateAdapter();
+                mTask = new FlickerAsynTask(query);
             }
+            mTask.execute();
+            updateAdapter();
         }
     }
 
@@ -205,6 +274,15 @@ public class PhotoGalleryFragment extends Fragment{
 //        if(mAdapter!=null)
 //            mAdapter.notifyDataSetChanged();
     }
+
+    private void showImage(int firstVisibleItem, int visualItemCount) {
+        for(int i=firstVisibleItem; i<firstVisibleItem+visualItemCount; i++){
+            String url = mGalleryList.get(i).getUrl();
+            if(url == null) continue;
+            mThumbnailDonwloader.downloadImage(url);
+        }
+    }
+
 
     public class GalleryHolder extends RecyclerView.ViewHolder{
 //        private TextView mTitleTextView;
@@ -278,13 +356,26 @@ public class PhotoGalleryFragment extends Fragment{
     private class FlickerAsynTask extends AsyncTask<Void, Void, List<GalleryItem>>{
 
 
+        private final String mQueryStr;
+
+        public FlickerAsynTask() {
+            mQueryStr = null;
+        }
+
+        public FlickerAsynTask(String query) {
+            mQueryStr = query;
+        }
 
         @Override
         protected List<GalleryItem> doInBackground(Void... params) {
             List<GalleryItem> galleryList;
 
 
-            galleryList =  new FlickerFetcher().FetchItem(mGalleryPageNum+1);
+            if(mQueryStr==null) {
+                galleryList =  new FlickerFetcher().FetchItem(mGalleryPageNum+1);
+            }else{
+                galleryList =  new FlickerFetcher().searchItem(mQueryStr);
+            }
             if(galleryList==null)  galleryList = new ArrayList<>();
 
             return galleryList;

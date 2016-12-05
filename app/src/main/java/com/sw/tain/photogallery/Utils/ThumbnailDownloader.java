@@ -50,6 +50,8 @@ public class ThumbnailDownloader extends HandlerThread {
     private ThumbnailDownloaderListner mThumbnailDownloaderListner;
     private Set<String> mDonwloadSet = Collections.synchronizedSet(new HashSet<String>());
 
+
+
     public interface ThumbnailDownloaderListner{
 //        void onThumbnailDownloaderListner(T target, Bitmap bitmap);
 //        boolean isDownlaodedMatchView(T target, String url);
@@ -87,6 +89,7 @@ public class ThumbnailDownloader extends HandlerThread {
             mRequestHandler.obtainMessage(MSG_THUMBNAIL_DOWLNOAD_INTO_VIEW, itemUrl).sendToTarget();
         }
     }
+
 
     public Bitmap getCacheBitmap(String url) {
         String subUrl = url.replaceAll("[^\\w]", "");
