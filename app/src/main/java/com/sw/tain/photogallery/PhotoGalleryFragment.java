@@ -251,20 +251,10 @@ public class PhotoGalleryFragment extends Fragment{
     }
 
     private void loadData(@Nullable String query) {
-//        if(mIsVisible && mIsCreated){
+
         if(mIsVisible && mIsCreated){
-//            if(mTask==null)
-//            {
-//                if(query==null){
-//                    mTask = new FlickerAsynTask();
-//                }else{
-//                    mTask = new FlickerAsynTask(query);
-//                }
-//
-//                mTask.execute();
-//            }else{
-//                updateAdapter();
-//            }
+            //若不加mIsCreated判断，则首次传入FlickAsynTask(...)的getActivity()的值会为空
+
             if(query==null){
                 mTask = new FlickerAsynTask(getActivity());
             }else{
