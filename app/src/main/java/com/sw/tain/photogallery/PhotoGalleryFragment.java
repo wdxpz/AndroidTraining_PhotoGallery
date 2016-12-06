@@ -1,5 +1,7 @@
 package com.sw.tain.photogallery;
 
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -189,7 +191,15 @@ public class PhotoGalleryFragment extends Fragment{
                     mThumbnailDonwloader.interrupt();
                     mThumbnailDonwloader.clearQueue();
                     mIsFirstEnter = true;
+
+                    //清空当前RecyclerView
+                    mGalleryList = new ArrayList<GalleryItem>();
+                    updateAdapter();
+                    //加载搜索数据
                     loadData(query);
+                    //收起搜索视图
+                    mSearchView.clearFocus();//收起键盘
+                    mSearchView.onActionViewCollapsed();//收起SearchView视图
                 }
                 return false;
             }
@@ -242,7 +252,7 @@ public class PhotoGalleryFragment extends Fragment{
 
     private void loadData(@Nullable String query) {
 //        if(mIsVisible && mIsCreated){
-        if(mIsVisible){
+        if(mIsVisible && mIsCreated){
 //            if(mTask==null)
 //            {
 //                if(query==null){
@@ -256,9 +266,9 @@ public class PhotoGalleryFragment extends Fragment{
 //                updateAdapter();
 //            }
             if(query==null){
-                mTask = new FlickerAsynTask();
+                mTask = new FlickerAsynTask(getActivity());
             }else{
-                mTask = new FlickerAsynTask(query);
+                mTask = new FlickerAsynTask(getActivity(), query);
             }
             mTask.execute();
             updateAdapter();
@@ -330,6 +340,9 @@ public class PhotoGalleryFragment extends Fragment{
         public void onBindViewHolder(GalleryHolder holder, int position) {
 //           holder.bindGalleryItem(item); //by Picasso
 
+            holder.mThumbnailImageView.setImageDrawable(getContext().getResources().getDrawable(R.drawable.ic_action_name));
+            if(mList==null) return;
+
             GalleryItem item = mList.get(position);
 
 //            holder.bindDrawalbe(null);
@@ -341,8 +354,6 @@ public class PhotoGalleryFragment extends Fragment{
             Bitmap bitmap = mThumbnailDonwloader.getCacheBitmap(url);
             if(bitmap!=null){
                 holder.mThumbnailImageView.setImageBitmap(bitmap);
-            }else{
-                holder.mThumbnailImageView.setImageDrawable(getContext().getResources().getDrawable(R.drawable.ic_action_name));
             }
         }
 
@@ -357,13 +368,18 @@ public class PhotoGalleryFragment extends Fragment{
 
 
         private final String mQueryStr;
+        private ProgressDialog mProgrssDialog;
+        private Context mContext;
 
-        public FlickerAsynTask() {
+        public FlickerAsynTask(Context context) {
             mQueryStr = null;
+            mContext = context;
         }
 
-        public FlickerAsynTask(String query) {
+
+        public FlickerAsynTask(Context context, String query) {
             mQueryStr = query;
+            mContext = context;
         }
 
         @Override
@@ -386,7 +402,17 @@ public class PhotoGalleryFragment extends Fragment{
             super.onPostExecute(galleryItems);
 
             mGalleryList = galleryItems;
+            mProgrssDialog.dismiss();
             updateAdapter();
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            mProgrssDialog = new ProgressDialog(mContext);
+            mProgrssDialog.setMessage("Loading...");
+            mProgrssDialog.show();
         }
     }
 
