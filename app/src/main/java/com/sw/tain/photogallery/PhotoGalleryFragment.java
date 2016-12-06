@@ -26,6 +26,8 @@ import android.widget.TextView;
 import com.squareup.picasso.Picasso;
 import com.sw.tain.photogallery.Utils.FlickerFetcher;
 import com.sw.tain.photogallery.Utils.GalleryItem;
+import com.sw.tain.photogallery.Utils.PollJobService;
+import com.sw.tain.photogallery.Utils.PollService;
 import com.sw.tain.photogallery.Utils.QueryPreferences;
 import com.sw.tain.photogallery.Utils.ThumbnailDownloader;
 
@@ -216,6 +218,15 @@ public class PhotoGalleryFragment extends Fragment{
 
             }
         });
+
+//        if(PollService.isPollSeriveOn(getActivity())){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if(PollJobService.isPollJobServiceOn(getActivity())){
+                menu.findItem(R.id.gallery_fragment_start_poll_service).setTitle("Stop Poll Service");
+            }else{
+                menu.findItem(R.id.gallery_fragment_start_poll_service).setTitle("Start Poll Service");
+            }
+        }
     }
 
 
@@ -227,6 +238,15 @@ public class PhotoGalleryFragment extends Fragment{
                 QueryPreferences.setQueryPreferences(getActivity(), null);
                 mSearchView.setQueryHint(null);
                 loadData(null);
+                break;
+            case R.id.gallery_fragment_start_poll_service:
+//                PollService.startPollService(getActivity(), !PollService.isPollSeriveOn(getActivity()));
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    PollJobService.setPollJobServiceOn(getActivity(),!PollJobService.isPollJobServiceOn(getActivity()));
+                }
+                getActivity().invalidateOptionsMenu();//让选项菜单失效从而重绘菜单
+                break;
+
         }
         return super.onOptionsItemSelected(item);
     }

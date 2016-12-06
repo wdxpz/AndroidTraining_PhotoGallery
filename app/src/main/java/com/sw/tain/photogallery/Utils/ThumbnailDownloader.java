@@ -30,7 +30,9 @@ import static android.R.attr.elegantTextHeight;
 /**
 *refer http://blog.csdn.net/lmj623565791/article/details/38377229,
 * http://blog.csdn.net/lmj623565791/article/details/47079737/
+ * http://blog.csdn.net/lfdfhl/article/details/53332936 （推荐）
 * for concept of Looper, Handler, Message, and HandlerThread
+ *
 
 *refer ImageLoader in http://blog.csdn.net/lmj623565791/article/details/38476887 for LruCache and image resampling
 *http://blog.sina.com.cn/s/blog_5da93c8f0102uxee.html for LruCache
@@ -41,7 +43,6 @@ import static android.R.attr.elegantTextHeight;
 public class ThumbnailDownloader extends HandlerThread {
     private static final String TAG = "ThumbernailDownloader";
     private static final int MSG_THUMBNAIL_DOWLNOAD_INTO_VIEW = 0;
-    private static final int MSG_THUMBNAIL_DOWLNOAD_ONLY = 1;
     private final Handler mMainThreadHandler;
     private  FileUtils mLocalCache;
     private  MemoryCacheUtils mMemoryCache;
@@ -178,46 +179,6 @@ public class ThumbnailDownloader extends HandlerThread {
 
         return bitmap;
     }
-
-//    private void handleRequest(final T target) {
-//        final String url = mRequestMap.get(target);
-//        Bitmap bitmap;
-//
-//
-//        if((bitmap = mMemoryCache.getBitmapFromLruCache(url))==null){
-//            if((bitmap = mLocalCache.getLocalCache(url))==null){
-//                if(!mDownloadingSet.contains(url))
-//                    bitmap = downloadImage(url);
-//                else
-//                    while(mDownloadingSet.contains(url)){
-//
-//                    }
-//            }else{
-//                Log.d("Donwloader", "loaded from local storage!");
-//            }
-//        }else{
-//            Log.d("Donwloader", "loaded from memory!");
-//        }
-//
-//        final Bitmap bitmap2 = bitmap;
-//        if(!mThumbnailDownloaderListner.isDownlaodedMatchView(target, url))
-//        {
-//            Log.d(TAG, "downloaded not match the view: /n"
-//                    + "view tag: " + ((PhotoGalleryFragment.GalleryHolder) target).mThumbnailImageView.getTag().toString() + "/n"
-//                    + "downloaded url: "+ url);
-//        }else{
-//            mMainThreadHandler.post(new Runnable() {
-//                @Override
-//                public void run() {
-//                    if (mIsQuit || mRequestMap.get(target) != url) {
-//                        return;
-//                    }
-//                    mRequestMap.remove(target);
-//                    mThumbnailDownloaderListner.onThumbnailDownloaderListner(target, bitmap2);
-//                }
-//            });
-//        }
-//    }
 
     @Override
     public boolean quit() {
