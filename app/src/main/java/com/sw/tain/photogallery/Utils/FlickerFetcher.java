@@ -157,6 +157,7 @@ public class FlickerFetcher {
                 item.setCaption(jsonPhotoObject.getString("title"));
                 item.setId(jsonPhotoObject.getString("id"));
                 item.setUrl(jsonPhotoObject.getString("url_s"));
+                item.setOwner(jsonPhotoObject.getString("owner"));
                 itemList.add(item);
             }
         } catch (JSONException e) {
@@ -228,7 +229,7 @@ public class FlickerFetcher {
             JSONArray jsonPhotoArry = jsonPhotosObject.getJSONArray("photo");
             for(int i=0; i<jsonPhotoArry.length(); i++){
                 JSONObject jsonPhotoObject = jsonPhotoArry.getJSONObject(i);
-                if(jsonPhotoObject.getString("url_s")==null || jsonPhotoObject.getString("url_s").equals("")) continue;
+                if(!jsonPhotoObject.has("url_s") || jsonPhotoObject.getString("url_s")==null || jsonPhotoObject.getString("url_s").equals("")) continue;
                 GalleryItem item =  new GalleryItem();
                 item.setCaption(jsonPhotoObject.getString("title"));
                 item.setId(jsonPhotoObject.getString("id"));

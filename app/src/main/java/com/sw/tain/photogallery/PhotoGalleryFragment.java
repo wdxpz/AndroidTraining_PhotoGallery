@@ -114,6 +114,7 @@ public class PhotoGalleryFragment extends Fragment{
                 ImageView view = (ImageView)mRecyclerView.findViewWithTag(url);
                 if(view == null) return;
                 view.setImageBitmap(bitmap);
+                mAdapter.notifyDataSetChanged();
 
             }
         });
@@ -307,15 +308,17 @@ public class PhotoGalleryFragment extends Fragment{
     }
 
 
-    public class GalleryHolder extends RecyclerView.ViewHolder{
+    public class GalleryHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
 //        private TextView mTitleTextView;
 //            mTitleTextView = (TextView)itemView;
         public ImageView mThumbnailImageView;
+        private GalleryItem mPhotoItem;
 
         public GalleryHolder(View itemView) {
             super(itemView);
             mThumbnailImageView = (ImageView)itemView.findViewById(R.id.grid_item_image_view);
 
+            mThumbnailImageView.setOnClickListener(this);
         }
 
 //        public void bindView(GalleryItem item) {
@@ -327,10 +330,19 @@ public class PhotoGalleryFragment extends Fragment{
         }
 
         public void bindGalleryItem(GalleryItem item){
-            Picasso.with(getActivity())
-                    .load(item.getUrl())
-                    .into(mThumbnailImageView);
+//            Picasso.with(getActivity())
+//                    .load(item.getUrl())
+//                    .into(mThumbnailImageView);
+            mPhotoItem = item;
         }
+
+        @Override
+        public void onClick(View v) {
+            if(mPhotoItem==null) return;
+            Intent i = new Intent(Intent.ACTION_VIEW, mPhotoItem.getPhotoUri());
+            startActivity(i);
+        }
+
     }
 
     private class GalleryAdapter extends RecyclerView.Adapter<GalleryHolder>{
@@ -354,6 +366,7 @@ public class PhotoGalleryFragment extends Fragment{
 //           holder.bindGalleryItem(item); //by Picasso
 
             holder.mThumbnailImageView.setImageDrawable(getContext().getResources().getDrawable(R.drawable.ic_action_name));
+            holder.bindGalleryItem(null);
             if(mList==null) return;
 
             GalleryItem item = mList.get(position);
@@ -367,6 +380,7 @@ public class PhotoGalleryFragment extends Fragment{
             Bitmap bitmap = mThumbnailDonwloader.getCacheBitmap(url);
             if(bitmap!=null){
                 holder.mThumbnailImageView.setImageBitmap(bitmap);
+                holder.bindGalleryItem(item);
             }
         }
 
