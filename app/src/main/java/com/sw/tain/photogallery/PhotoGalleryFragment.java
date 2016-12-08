@@ -1,10 +1,13 @@
 package com.sw.tain.photogallery;
 
+import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.Nullable;
@@ -26,13 +29,10 @@ import android.widget.TextView;
 import com.squareup.picasso.Picasso;
 import com.sw.tain.photogallery.Utils.FlickerFetcher;
 import com.sw.tain.photogallery.Utils.GalleryItem;
-import com.sw.tain.photogallery.Utils.PollJobService;
-import com.sw.tain.photogallery.Utils.PollService;
+import com.sw.tain.photogallery.Service.PollService;
 import com.sw.tain.photogallery.Utils.QueryPreferences;
 import com.sw.tain.photogallery.Utils.ThumbnailDownloader;
 
-import java.io.FileDescriptor;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -212,16 +212,17 @@ public class PhotoGalleryFragment extends Fragment{
                 return false;
             }
         });
-        mSearchView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
 
-            }
-        });
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+//            if(PollJobService.isPollJobServiceOn(getActivity())){
+//                menu.findItem(R.id.gallery_fragment_start_poll_service).setTitle("Stop Poll Service");
+//            }else{
+//                menu.findItem(R.id.gallery_fragment_start_poll_service).setTitle("Start Poll Service");
+//            }
+//        }
 
-//        if(PollService.isPollSeriveOn(getActivity())){
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            if(PollJobService.isPollJobServiceOn(getActivity())){
+        if(PollService.isPollSeriveOn(getActivity())){
+            if(PollService.isPollSeriveOn(getActivity())){
                 menu.findItem(R.id.gallery_fragment_start_poll_service).setTitle("Stop Poll Service");
             }else{
                 menu.findItem(R.id.gallery_fragment_start_poll_service).setTitle("Start Poll Service");
@@ -240,10 +241,12 @@ public class PhotoGalleryFragment extends Fragment{
                 loadData(null);
                 break;
             case R.id.gallery_fragment_start_poll_service:
-//                PollService.startPollService(getActivity(), !PollService.isPollSeriveOn(getActivity()));
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    PollJobService.setPollJobServiceOn(getActivity(),!PollJobService.isPollJobServiceOn(getActivity()));
-                }
+                //IntentService to realize backend service thread
+                PollService.startPollService(getActivity(), !PollService.isPollSeriveOn(getActivity()));
+                                //JobService and JobScheduler to realize customized backend service thread
+//                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+//                    PollJobService.setPollJobServiceOn(getActivity(),!PollJobService.isPollJobServiceOn(getActivity()));
+//                }
                 getActivity().invalidateOptionsMenu();//让选项菜单失效从而重绘菜单
                 break;
 
@@ -423,6 +426,33 @@ public class PhotoGalleryFragment extends Fragment{
             mProgrssDialog = new ProgressDialog(mContext);
             mProgrssDialog.setMessage("Loading...");
             mProgrssDialog.show();
+        }
+    }
+
+    private MyReciever mReciever = new MyReciever();
+    @Override
+    public void onStart() {
+        super.onStart();
+        IntentFilter intentFilter = new IntentFilter(PollService.ACTION_SHOW_NOTIFICATION);
+        //如果不给Reciever添加权限，可以收到本应用发出的设有权限的broadcast，并且会接收其他应用发送的broadcast
+//        getActivity().registerReceiver(mReciever, intentFilter);
+        getActivity().registerReceiver(mReciever, intentFilter, PollService.PERM_PRIVATE, null);
+    }
+
+    //若在onCreate, onDestroy中调用registerReceiver, unegisterReceiver, 则必须使用getActivity.getApplicationConetxt.register...
+    @Override
+    public void onStop() {
+        super.onStop();
+        getActivity().unregisterReceiver(mReciever);
+    }
+
+    private class MyReciever extends BroadcastReceiver{
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            setResultCode(Activity.RESULT_CANCELED);
+            Log.d(TAG, "receiver gets broadcast: " + intent.getAction());
+            Log.d(TAG, "cancel notification!");
         }
     }
 

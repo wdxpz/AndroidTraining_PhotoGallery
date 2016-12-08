@@ -1,4 +1,4 @@
-package com.sw.tain.photogallery.Utils;
+package com.sw.tain.photogallery.Service;
 
 import android.app.job.JobInfo;
 import android.app.job.JobParameters;

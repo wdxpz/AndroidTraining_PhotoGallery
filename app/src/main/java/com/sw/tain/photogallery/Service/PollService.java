@@ -1,5 +1,6 @@
-package com.sw.tain.photogallery.Utils;
+package com.sw.tain.photogallery.Service;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.IntentService;
 import android.app.Notification;
@@ -10,10 +11,10 @@ import android.net.ConnectivityManager;
 import android.os.SystemClock;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
-import android.support.v4.net.ConnectivityManagerCompat;
 import android.util.Log;
 
 import com.sw.tain.photogallery.PhotoGalleryPagerActivity;
+import com.sw.tain.photogallery.Utils.QueryPreferences;
 
 /**
  * Created by home on 2016/12/6.
@@ -26,7 +27,13 @@ public class PollService extends IntentService {
      * @param name Used to name the worker thread, important only for debugging.
      */
     private static final String TAG = "Poll Service";
-    private static final int POLL_INTERVAL = 100;
+    private static final int POLL_INTERVAL = 1000;
+
+
+    public static final String ACTION_SHOW_NOTIFICATION = "com.sw.tain.photogallery.SHOW_NOTIFICATION";
+    public static final String PERM_PRIVATE = "com.sw.tain.photogallery.PRIVATE";
+    public static final String NOTIFICATION ="Notification";
+
     public PollService() {
         super(TAG);
     }
@@ -50,9 +57,21 @@ public class PollService extends IntentService {
                 .setAutoCancel(true)
                 .build();
 
-        NotificationManagerCompat nm = NotificationManagerCompat.from(this);
-        nm.notify(0, notification);
+//        NotificationManagerCompat nm = NotificationManagerCompat.from(this);
+//        nm.notify(0, notification);
 
+//        sendBroadcast(new Intent(SHOW_NOTIFICATION_ACTION));
+
+        //设置私有权限，仅声明此权限的应用可以接收该广播
+//        sendBroadcast(new Intent(SHOW_NOTIFICATION_ACTION), PERM_PRIVATE);
+
+        //发送有序广播，并带上传递的数据
+        Intent intent1 = new Intent(ACTION_SHOW_NOTIFICATION);
+        intent1.putExtra("REQUEST_CODE", 0);
+        intent1.putExtra(NOTIFICATION, notification);
+        sendOrderedBroadcast(intent1, PERM_PRIVATE, null, null, Activity.RESULT_OK, null, null);
+
+        Log.d(TAG, "sent out ordered broadcast with private right: " + ACTION_SHOW_NOTIFICATION);
 
     }
 
@@ -73,6 +92,8 @@ public class PollService extends IntentService {
             alarmManager.cancel(pt);
             pt.cancel();
         }
+
+        QueryPreferences.setServiceOnPreference(context, isOn);
     }
 
     public static boolean isPollSeriveOn(Context context){
