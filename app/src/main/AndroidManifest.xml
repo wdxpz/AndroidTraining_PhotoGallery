@@ -25,6 +25,10 @@
             <category android:name="android.intent.category.LAUNCHER"/>
         </intent-filter>
     </activity>
+    <activity android:name=".PhotoWebViewActivity"
+        android:configChanges="keyboardHidden|orientation|screenSize">
+    </activity>
+
     <service android:name=".Service.PollService"/>
     <service android:name=".Service.PollJobService"
              android:permission="android.permission.BIND_JOB_SERVICE"

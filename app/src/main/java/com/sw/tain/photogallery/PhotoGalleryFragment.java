@@ -339,7 +339,11 @@ public class PhotoGalleryFragment extends Fragment{
         @Override
         public void onClick(View v) {
             if(mPhotoItem==null) return;
-            Intent i = new Intent(Intent.ACTION_VIEW, mPhotoItem.getPhotoUri());
+            //启动浏览器
+//            Intent i = new Intent(Intent.ACTION_VIEW, mPhotoItem.getPhotoUri());
+//            startActivity(i);
+            //启动WebView
+            Intent i = PhotoWebViewActivity.newIntent(getActivity(), mPhotoItem.getPhotoUri());
             startActivity(i);
         }
 
